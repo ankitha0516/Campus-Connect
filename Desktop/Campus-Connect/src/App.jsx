@@ -1,4 +1,4 @@
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router";
 
 import "./App.css";
@@ -10,13 +10,15 @@ import HomePage from "./pages/HomePage";
 import EventsPage from "./pages/EventsPage";
 import EventDetailsPage from "./pages/EventDetailsPage";
 import AboutPage from "./pages/AboutPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
 
 
 function App() {
     const [events, setEvents] = useState([]);
-
-     useEffect(()=>{
+    const [editingEvent, setEditingEvent] = useState(null);
+    useEffect(()=>{
         fetch("http://localhost:5000/api/events")
         .then((response)=>response.json())
         .then((data)=>{
@@ -25,12 +27,30 @@ function App() {
     }, []);
 
     function handleAddEvent(newEvent) {
-        setEvents([...events, newEvent]);
+        fetch("http://localhost:5000/api/events",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify(newEvent)
+        }).then((response)=>response.json())
+        .then((data)=>{
+            console.log(data);
+            fetch("http://localhost:5000/api/events/")
+            .then((response)=>response.json())
+            .then((data)=>{
+                setEvents(data);
+            })
+        })
     }
 
     function handleDeleteEvent(eventId) {
         fetch(`http://localhost:5000/api/events/${eventId}`,{
-            method: "DELETE"
+            method:"DELETE",
+            headers:{
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
         }).then((response)=>response.json())
         .then((data)=>{
             console.log(data);
@@ -38,6 +58,34 @@ function App() {
             .then((response)=>response.json())
             .then((data)=>{
                 setEvents(data);
+            });
+        });
+    }
+
+    function handleEditEvent(eventId){
+        const selectedEvent = events.find(function(event){
+            return event._id === eventId;
+        });
+        setEditingEvent(selectedEvent);
+    }
+
+    function handleUpdateEvent(updatedEvent){
+        fetch(`http://localhost:5000/api/events/${updatedEvent._id}`, {
+            method : "PUT",
+            headers: {
+                "Content-Type" : "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify(updatedEvent)
+        }).then((response)=>response.json())
+        .then((data)=>{
+            console.log(data);
+
+            fetch("http://localhost:5000/api/events")
+            .then((response) => response.json())
+            .then((data) => {
+                setEvents(data);
+                setEditingEvent(null);
             });
         });
     }
@@ -54,6 +102,9 @@ function App() {
                             events={events}
                             onAddEvent={handleAddEvent}
                             onDeleteEvent={handleDeleteEvent}
+                            onEditEvent={handleEditEvent}
+                            editingEvent={editingEvent}
+                            onUpdateEvent={handleUpdateEvent}
                         />
                     }
                 />
@@ -80,6 +131,13 @@ function App() {
                 <Route
                     path="/about"
                     element={<AboutPage />}
+                />
+                <Route
+                path ="/login"
+                element={<LoginPage />}
+                />
+                <Route path ="/register"
+                element={<RegisterPage />}
                 />
             </Routes>
 
